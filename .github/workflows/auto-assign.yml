@@ -12,8 +12,8 @@ jobs:
       pull-requests: write
     steps:
     - name: 'Auto-assign issue'
-      uses: pozil/auto-assign-issue@v1
+      uses: pozil/auto-assign-issue@v4
       with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          assignees: Omn1presend
+          assignees: Omn1presend,all_caaash,Sentiku,Grigoriy Nabiev,Cherrygenius
           numOfAssignee: 1
