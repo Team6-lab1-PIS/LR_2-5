@@ -15,5 +15,5 @@ jobs:
       uses: pozil/auto-assign-issue@v4
       with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          assignees: Omn1presend,all_caaash,Sentiku,Grigoriy Nabiev,Cherrygenius
+          assignees: Omn1presend,allcaaash,Sentiku,grrgn,Cherrygenius
           numOfAssignee: 1
