@@ -1,0 +1,116 @@
+name: Labs CI and downloadable builds
+
+on:
+  push:
+    branches: [main, Develop]
+  pull_request:
+    branches: [main, Develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and check Lab2-Lab5
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: 'Lab4/**/pom.xml'
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Rust
+        run: rustup toolchain install 1.85.1 --profile minimal
+
+      - name: Build and check Lab2
+        run: |
+          mkdir -p dist/Lab2/classes
+          javac --release 21 -encoding UTF-8 -d dist/Lab2/classes Lab2/Main.java
+          jar --create --file dist/Lab2/lab2.jar --main-class Main -C dist/Lab2/classes .
+          cp Lab2/input.txt dist/Lab2/input.txt
+          timeout 30s java -jar dist/Lab2/lab2.jar dist/Lab2/input.txt | tee lab2-output.txt
+          grep -q 'Коэффициент K =' lab2-output.txt
+
+      - name: Build and check Lab3
+        run: |
+          mkdir -p dist/Lab3
+          rustc +1.85.1 --edition=2021 -O Lab3/main.rs -o dist/Lab3/lab3-linux-x64
+          timeout 30s dist/Lab3/lab3-linux-x64 < /dev/null | tee lab3-output.txt
+          grep -q 'B_next' lab3-output.txt
+          cp Lab3/*.rs dist/Lab3/
+
+      - name: Build and check Lab4
+        run: |
+          mvn -B -ntp -f Lab4/pom.xml clean verify
+          test -f Lab4/Ex_1/target/classes/example/Main.class
+          test -f Lab4/Ex_2/target/classes/bookstore/Book.class
+          test -f Lab4/Ex_3/target/classes/cern/colt/Arrays.class
+          mkdir -p dist/Lab4
+          for module in Ex_1 Ex_2 Ex_3; do
+            mkdir -p "dist/Lab4/$module"
+            cp "Lab4/$module/target/$module-1.0-SNAPSHOT.jar" "dist/Lab4/$module/"
+          done
+          mvn -B -ntp -f Lab4/pom.xml dependency:copy-dependencies -DincludeScope=runtime
+          for module in Ex_1 Ex_2 Ex_3; do
+            if [ -d "Lab4/$module/target/dependency" ]; then
+              cp -r "Lab4/$module/target/dependency" "dist/Lab4/$module/lib"
+            fi
+          done
+
+      - name: Check and package Lab5
+        run: |
+          python -m py_compile Lab5/T_n_i.py Lab5/T_v.py
+          python Lab5/T_n_i.py
+          python Lab5/T_v.py
+          mkdir -p dist/Lab5
+          cp Lab5/*.py dist/Lab5/
+
+      - name: Add launch instructions
+        run: |
+          cat > dist/README.txt <<'EOF'
+          Lab2 (Java 21+):
+            cd Lab2
+            java -jar lab2.jar input.txt
+
+          Lab3 (Linux x64):
+            chmod +x Lab3/lab3-linux-x64
+            ./Lab3/lab3-linux-x64
+          To build on Windows or another OS, install Rust and run inside Lab3:
+            rustc --edition=2021 main.rs -o lab3
+
+          Lab4 (Java 21+):
+          Ex_1 demo, from the extracted archive root:
+            java -cp "Lab4/Ex_1/Ex_1-1.0-SNAPSHOT.jar" example.Main
+          The current Ex_1 demo throws NullPointerException in
+          TernaryConditionalExample.run; CI checks its compilation only.
+          Ex_2 and Ex_3 are libraries, not standalone applications.
+          Runtime dependencies, where needed, are in each module's lib folder.
+          A classpath separator is : on Linux/macOS and ; on Windows.
+
+          Lab5 (Python 3):
+            python Lab5/T_n_i.py
+            python Lab5/T_v.py
+
+          Checks include compilation and basic launches, not full functional tests.
+          EOF
+
+      - name: Upload all labs
+        uses: actions/upload-artifact@v4
+        with:
+          name: labs-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
