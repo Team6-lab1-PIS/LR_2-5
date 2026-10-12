@@ -1,4 +1,4 @@
-name: Labs CI and downloadable builds
+name: Labs CI
 
 on:
   push:
@@ -77,40 +77,3 @@ jobs:
           python Lab5/T_v.py
           mkdir -p dist/Lab5
           cp Lab5/*.py dist/Lab5/
-
-      - name: Add launch instructions
-        run: |
-          cat > dist/README.txt <<'EOF'
-          Lab2 (Java 21+):
-            cd Lab2
-            java -jar lab2.jar input.txt
-
-          Lab3 (Linux x64):
-            chmod +x Lab3/lab3-linux-x64
-            ./Lab3/lab3-linux-x64
-          To build on Windows or another OS, install Rust and run inside Lab3:
-            rustc --edition=2021 main.rs -o lab3
-
-          Lab4 (Java 21+):
-          Ex_1 demo, from the extracted archive root:
-            java -cp "Lab4/Ex_1/Ex_1-1.0-SNAPSHOT.jar" example.Main
-          The current Ex_1 demo throws NullPointerException in
-          TernaryConditionalExample.run; CI checks its compilation only.
-          Ex_2 and Ex_3 are libraries, not standalone applications.
-          Runtime dependencies, where needed, are in each module's lib folder.
-          A classpath separator is : on Linux/macOS and ; on Windows.
-
-          Lab5 (Python 3):
-            python Lab5/T_n_i.py
-            python Lab5/T_v.py
-
-          Checks include compilation and basic launches, not full functional tests.
-          EOF
-
-      - name: Upload all labs
-        uses: actions/upload-artifact@v4
-        with:
-          name: labs-${{ github.sha }}
-          path: dist/
-          if-no-files-found: error
-          retention-days: 30
